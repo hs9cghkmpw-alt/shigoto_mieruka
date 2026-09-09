@@ -4,6 +4,7 @@ import csv
 from pathlib import Path
 
 from association.scorer import Candidate, choose_assignment, score_candidate
+from experiment.aggregator import classify_result
 from experiment.fixtures import FIXTURES
 
 
@@ -11,11 +12,17 @@ def run(output: str | Path = "experiment_log.csv") -> None:
     rows = []
     for fixture in FIXTURES:
         score = score_candidate(**fixture["signals"])
-        predicted = choose_assignment(
-            [Candidate("WI-001", score, tuple(fixture["signals"]))]
-        )
+        candidates = [
+            Candidate(fixture["expected_work_item_id"], score, tuple(fixture["signals"])),
+            Candidate("DISTRACTOR", 0.20, ("distractor",)),
+        ]
+        predicted = choose_assignment(candidates)
         predicted_id = predicted.work_item_id if predicted else ""
-        result = "GO" if predicted_id == fixture["expected_work_item_id"] and predicted_id else "GRAY"
+        result = classify_result(
+            predicted=predicted_id or None,
+            expected=fixture["expected_work_item_id"],
+            confidence=score if predicted else 0.0,
+        )
         rows.append({
             "experiment_id": fixture["experiment_id"],
             "pattern": fixture["pattern"],
