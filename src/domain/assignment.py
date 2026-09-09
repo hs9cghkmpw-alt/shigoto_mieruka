@@ -21,15 +21,11 @@ def correct_assignment(trace: WorkTrace, *, corrected_work_item_id: str | None, 
     if not reason.strip(): raise ValueError("reason is required")
     previous = trace.work_item_id or trace.predicted_work_item_id
     trace.work_item_id = corrected_work_item_id
+    trace.predicted_work_item_id = previous
     trace.assignment_status = AssignmentStatus.CONFIRMED if corrected_work_item_id else AssignmentStatus.UNASSIGNED
     return AssignmentCorrection(
-        correction_id=f"CORR-{trace.trace_id}-{corrected_at.isoformat()}",
-        trace_id=trace.trace_id,
-        previous_work_item_id=previous,
-        corrected_work_item_id=corrected_work_item_id,
-        corrected_at=corrected_at,
-        corrected_by=corrected_by,
-        reason=reason,
-        evidence_ids=tuple(evidence_ids or []),
-        client_version=client_version,
+        correction_id=f"CORR-{trace.trace_id}-{corrected_at.isoformat()}", trace_id=trace.trace_id,
+        previous_work_item_id=previous, corrected_work_item_id=corrected_work_item_id,
+        corrected_at=corrected_at, corrected_by=corrected_by, reason=reason,
+        evidence_ids=tuple(evidence_ids or []), client_version=client_version,
     )
