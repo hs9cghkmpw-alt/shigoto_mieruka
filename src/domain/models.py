@@ -60,6 +60,17 @@ class WorkTrace:
     metadata: dict = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class AssignmentCorrection:
+    correction_id: str
+    trace_id: str
+    previous_work_item_id: Optional[str]
+    corrected_work_item_id: Optional[str]
+    corrected_at: datetime
+    corrected_by: str
+    reason: Optional[str] = None
+
+
 @dataclass
 class Fact:
     fact_id: str
