@@ -24,6 +24,10 @@ class ConnectorRegistry:
     def names(self) -> tuple[str, ...]:
         return tuple(sorted(self._connectors))
 
-    def pull(self, name: str, *, since=None) -> Iterable[SourceEvent]:
+    def collect(self, name: str, *, since=None) -> list[SourceEvent]:
         """Provider-specific authentication and retrieval stay inside the connector."""
-        return self.get(name).pull(since=since)
+        return self.get(name).collect(since=since)
+
+    # Backward-compatible alias for callers that use pull terminology.
+    def pull(self, name: str, *, since=None) -> list[SourceEvent]:
+        return self.collect(name, since=since)
