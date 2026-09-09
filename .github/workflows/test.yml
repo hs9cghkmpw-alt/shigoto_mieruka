@@ -1,0 +1,36 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependency
+        run: python -m pip install --upgrade pip pytest
+      - name: Run tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q
+      - name: Run experiment
+        env:
+          PYTHONPATH: src
+        run: python -m experiment.run_experiment
+      - name: Aggregate experiment
+        env:
+          PYTHONPATH: src
+        run: python - <<'PY'
+from experiment.aggregator import aggregate_csv
+print(aggregate_csv('experiment_log.csv'))
+PY
+      - name: Upload experiment log
+        uses: actions/upload-artifact@v4
+        with:
+          name: experiment-log
+          path: experiment_log.csv
