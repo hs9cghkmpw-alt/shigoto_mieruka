@@ -1,7 +1,7 @@
-"""Minimal domain models for Work Memory / Work Trace.
+"""Domain models for Work Memory / Work Trace.
 
-The models intentionally keep FACT, ANALYSIS and KNOWLEDGE separate.
-They are implementation scaffolding, not the final persistence model.
+The model keeps source evidence, observations, predictions, and human decisions
+separate so downstream analysis cannot silently turn inference into fact.
 """
 
 from dataclasses import dataclass, field
@@ -26,6 +26,21 @@ class AssignmentStatus(str, Enum):
     UNASSIGNED = "unassigned"
     PROVISIONAL = "provisional"
     CONFIRMED = "confirmed"
+
+
+@dataclass(frozen=True)
+class EvidenceRef:
+    """Immutable pointer to the source evidence used to create a trace/signal."""
+
+    evidence_id: str
+    source_type: str
+    source_id: str
+    observed_at: datetime
+    captured_at: datetime
+    content_hash: str
+    extractor_version: str
+    security_classification: SecurityClassification = SecurityClassification.INTERNAL
+    provenance: Provenance = Provenance.OBSERVED
 
 
 @dataclass
@@ -57,6 +72,8 @@ class WorkTrace:
     security_classification: SecurityClassification = SecurityClassification.INTERNAL
     provenance: Optional[Provenance] = None
     confidence: Optional[float] = None
+    evidence_ids: list[str] = field(default_factory=list)
+    extractor_version: Optional[str] = None
     metadata: dict = field(default_factory=dict)
 
 
