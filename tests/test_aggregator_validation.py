@@ -31,9 +31,9 @@ def test_valid_experiment_row_has_no_schema_errors():
 
 
 def test_invalid_experiment_row_is_rejected():
-    errors = validate_experiment_rows(valid_row(
+    errors = validate_experiment_rows([valid_row(
         confidence="1.20", corrected="maybe", result="UNKNOWN"
-    ))
+    )])
     assert "row 2: result must be GO, GRAY, or STOP" in errors
     assert "row 2: confidence must be between 0 and 1" in errors
     assert "row 2: corrected must be true or false" in errors
