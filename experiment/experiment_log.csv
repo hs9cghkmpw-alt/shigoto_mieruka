@@ -1,0 +1,11 @@
+id,pattern,date_time,expected_work_item,auto_assigned_work_item,association_correct,wrong_assignment,unclassified,correction_start,correction_end,correction_seconds,additional_recording_start,additional_recording_end,additional_recording_seconds,rework_count,reuse_or_improvement_value,observed_reported_conflict,security_classification,notes
+1,電話,,,,,,,,,,,,,,,,internal,
+2,電話,,,,,,,,,,,,,,,,internal,
+3,メール,,,,,,,,,,,,,,,,internal,
+4,文書閲覧,,,,,,,,,,,,,,,,internal,
+5,Web調査,,,,,,,,,,,,,,,,internal,
+6,他者依頼,,,,,,,,,,,,,,,,internal,
+7,割り込み,,,,,,,,,,,,,,,,internal,
+8,並行案件,,,,,,,,,,,,,,,,internal,
+9,完了フォロー,,,,,,,,,,,,,,,,internal,
+10,複数日,,,,,,,,,,,,,,,,internal,
