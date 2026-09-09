@@ -24,6 +24,14 @@ def test_low_confidence_goes_unassigned():
     assert choose_assignment([candidate]) is None
 
 
+def test_tied_candidates_go_unassigned():
+    candidates = [
+        Candidate("WI-1", 0.70, ("thread",)),
+        Candidate("WI-2", 0.70, ("thread",)),
+    ]
+    assert choose_assignment(candidates) is None
+
+
 def test_score_is_deterministic_and_bounded():
     score = score_candidate(
         thread_match=True,
