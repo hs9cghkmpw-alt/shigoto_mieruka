@@ -20,6 +20,7 @@ def test_confirmation_is_explicit():
     item = trace()
     confirm_assignment(item, "WI-1")
     assert item.work_item_id == "WI-1"
+    assert item.predicted_work_item_id == "WI-1"
     assert item.assignment_status == AssignmentStatus.CONFIRMED
 
 
@@ -30,7 +31,13 @@ def test_confirmation_cannot_be_repeated():
         confirm_assignment(item, "WI-1")
 
 
-def test_correction_preserves_previous_assignment_in_record():
+def test_confirmation_disagreement_requires_correction():
+    item = trace()
+    with pytest.raises(ValueError, match="use correction"):
+        confirm_assignment(item, "WI-2")
+
+
+def test_correction_preserves_prediction_and_records_previous_assignment():
     item = trace()
     correction = correct_assignment(
         item,
@@ -41,11 +48,12 @@ def test_correction_preserves_previous_assignment_in_record():
     )
     assert correction.previous_work_item_id == "WI-1"
     assert correction.corrected_work_item_id == "WI-2"
+    assert item.predicted_work_item_id == "WI-1"
     assert item.work_item_id == "WI-2"
     assert item.assignment_status == AssignmentStatus.CONFIRMED
 
 
-def test_correction_can_return_trace_to_unclassified():
+def test_correction_can_return_trace_to_unclassified_without_erasing_prediction():
     item = trace()
     correction = correct_assignment(
         item,
@@ -56,4 +64,6 @@ def test_correction_can_return_trace_to_unclassified():
     )
     assert correction.previous_work_item_id == "WI-1"
     assert correction.corrected_work_item_id is None
+    assert item.predicted_work_item_id == "WI-1"
+    assert item.work_item_id is None
     assert item.assignment_status == AssignmentStatus.UNASSIGNED
