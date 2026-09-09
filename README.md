@@ -5,7 +5,19 @@
 
 単純な工数管理、常時監視、単一スコアによる人事評価を目的としない。
 
-## 現在地
+## 引き継ぎ・設計ドキュメント
+新しい担当者は以下を上から順に読むこと。
+
+1. [`docs/HANDOVER.md`](docs/HANDOVER.md) — 開発再開手順・報告ルール
+2. [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) — プロジェクト全体の前提
+3. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — アーキテクチャとデータフロー
+4. [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) — ドメインモデル・状態・境界
+5. [`docs/DECISIONS.md`](docs/DECISIONS.md) — 設計判断と理由
+6. [`docs/REVIEW_HISTORY.md`](docs/REVIEW_HISTORY.md) — 厳格レビューと既知の問題
+7. [`docs/WORK_LOG.md`](docs/WORK_LOG.md) — 作業・レビュー・引き継ぎログ
+8. [`docs/ROADMAP.md`](docs/ROADMAP.md) — 実装優先順位
+
+## 目的と現在地
 **技術基盤: 強化済み。** ただし、**実運用製品の完成を100%とは宣言しない**。実サービス接続・実仕事データ・UI実証が必要だからである。
 
 実装済み:
