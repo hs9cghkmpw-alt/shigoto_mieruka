@@ -41,11 +41,14 @@ def choose_assignment(
     *,
     minimum_confidence: float = 0.60,
 ) -> Candidate | None:
-    """Choose the best candidate, or return None for the unclassified tray."""
+    """Choose a unique best candidate, or return None for the unclassified tray."""
     if not candidates:
         return None
 
-    best = max(candidates, key=lambda candidate: candidate.score)
+    ranked = sorted(candidates, key=lambda candidate: candidate.score, reverse=True)
+    best = ranked[0]
     if best.score < minimum_confidence:
+        return None
+    if len(ranked) > 1 and ranked[1].score == best.score:
         return None
     return best
