@@ -9,6 +9,8 @@ def test_strict_validation_is_canonical():
     trace = WorkTrace("T", "mail", datetime.now(timezone.utc), assignment_status=AssignmentStatus.CONFIRMED, provenance=Provenance.OBSERVED, source="mail")
     errors = validate_work_trace(trace)
     assert "confirmed assignment requires work_item_id" in errors
+    trace.work_item_id = "WI-1"
+    errors = validate_work_trace(trace)
     assert "confirmed assignment requires prediction to equal confirmed work item" in errors
 
 
