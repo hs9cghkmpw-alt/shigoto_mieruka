@@ -1,7 +1,7 @@
 """Domain models for Work Memory / Work Trace.
 
-The model keeps source evidence, observations, predictions, and human decisions
-separate so downstream analysis cannot silently turn inference into fact.
+The model keeps source evidence, observations, predictions, human decisions,
+and capability hypotheses separate so inference cannot silently become fact.
 """
 
 from dataclasses import dataclass, field
@@ -28,10 +28,16 @@ class AssignmentStatus(str, Enum):
     CONFIRMED = "confirmed"
 
 
+class KnowledgeStatus(str, Enum):
+    CANDIDATE = "candidate"
+    VALIDATED = "validated"
+    EXPIRED = "expired"
+    SUPERSEDED = "superseded"
+    REJECTED = "rejected"
+
+
 @dataclass(frozen=True)
 class EvidenceRef:
-    """Immutable pointer to the source evidence used to create a trace/signal."""
-
     evidence_id: str
     source_type: str
     source_id: str
@@ -86,6 +92,8 @@ class AssignmentCorrection:
     corrected_at: datetime
     corrected_by: str
     reason: Optional[str] = None
+    evidence_ids: tuple[str, ...] = ()
+    client_version: Optional[str] = None
 
 
 @dataclass
@@ -107,6 +115,10 @@ class Analysis:
     confidence: float
     model: Optional[str] = None
     status: str = "draft"
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    method_version: Optional[str] = None
+    input_method: Optional[str] = None
 
 
 @dataclass
@@ -116,11 +128,31 @@ class Knowledge:
     source_analysis_ids: list[str]
     statement: str
     evidence_count: int = 0
-    validation_status: str = "candidate"
+    validation_status: str = KnowledgeStatus.CANDIDATE.value
     validated_by: Optional[str] = None
     validated_at: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     security_classification: SecurityClassification = SecurityClassification.INTERNAL
+    evidence_diversity: int = 0
+    superseded_by: Optional[str] = None
+    status_changed_at: Optional[datetime] = None
+    status_changed_by: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class CapabilityHypothesis:
+    """Context-conditioned hypothesis; never a factual ability score."""
+
+    hypothesis_id: str
+    work_item_type: str
+    context: tuple[str, ...]
+    observed_outcome: str
+    source_trace_ids: tuple[str, ...]
+    source_fact_ids: tuple[str, ...] = ()
+    confidence: Optional[float] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    status: str = "candidate"
 
 
 @dataclass

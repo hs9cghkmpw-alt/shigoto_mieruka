@@ -1,23 +1,41 @@
-"""Evidence helpers for auditable WorkTrace creation."""
+"""Evidence retention and retrieval primitives.
+
+The default record stores a digest and metadata, not raw sensitive content.
+A concrete source-specific connector may keep the original outside this store.
+"""
 
 from dataclasses import dataclass
 from datetime import datetime
-import hashlib
+from enum import Enum
 
 from domain.models import EvidenceRef, Provenance, SecurityClassification
 
 
+class EvidenceStatus(str, Enum):
+    ACTIVE = "active"
+    RETAINED = "retained"
+    EXPIRED = "expired"
+    REVOKED = "revoked"
+
+
 @dataclass(frozen=True)
 class ObservedEvidence:
-    """Canonical source payload used before a WorkTrace is created."""
-
     evidence: EvidenceRef
     payload_digest: str
+    status: EvidenceStatus = EvidenceStatus.ACTIVE
+    expires_at: datetime | None = None
+    retention_policy: str = "default"
+
+    def is_usable_at(self, at: datetime) -> bool:
+        return self.status in {EvidenceStatus.ACTIVE, EvidenceStatus.RETAINED} and (
+            self.expires_at is None or at <= self.expires_at
+        )
 
 
-def content_hash(content: str) -> str:
-    """Return a stable SHA-256 digest without storing source content here."""
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+def content_hash(content: str | bytes) -> str:
+    import hashlib
+    raw = content.encode("utf-8") if isinstance(content, str) else content
+    return hashlib.sha256(raw).hexdigest()
 
 
 def make_evidence_ref(
@@ -27,12 +45,11 @@ def make_evidence_ref(
     source_id: str,
     observed_at: datetime,
     captured_at: datetime,
-    content: str,
+    content: str | bytes,
     extractor_version: str,
     security_classification: SecurityClassification = SecurityClassification.INTERNAL,
     provenance: Provenance = Provenance.OBSERVED,
 ) -> EvidenceRef:
-    """Create an immutable source reference; raw content is never returned."""
     return EvidenceRef(
         evidence_id=evidence_id,
         source_type=source_type,
@@ -44,3 +61,15 @@ def make_evidence_ref(
         security_classification=security_classification,
         provenance=provenance,
     )
+
+
+def expire_evidence(evidence: ObservedEvidence, *, at: datetime) -> ObservedEvidence:
+    if evidence.expires_at is None or at >= evidence.expires_at:
+        return ObservedEvidence(
+            evidence=evidence.evidence,
+            payload_digest=evidence.payload_digest,
+            status=EvidenceStatus.EXPIRED,
+            expires_at=evidence.expires_at,
+            retention_policy=evidence.retention_policy,
+        )
+    return evidence
