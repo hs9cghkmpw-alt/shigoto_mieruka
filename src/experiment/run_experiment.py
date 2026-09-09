@@ -27,18 +27,29 @@ def run(output: str | Path = "experiment_log.csv") -> None:
         )
         rows.append({
             "experiment_id": fixture["experiment_id"],
-            "pattern": fixture["pattern"],
             "trace_id": fixture["trace_id"],
+            "occurred_at": "fixture",
+            "event_type": "fixture",
+            "work_description": fixture["pattern"],
+            "observed_signals": ";".join(sorted(fixture["signals"])),
             "expected_work_item_id": fixture["expected_work_item_id"],
             "predicted_work_item_id": predicted_id,
             "confidence": f"{predicted_confidence:.2f}",
             "assignment_status": "provisional" if predicted_id else "unassigned",
             "corrected": "false",
+            "correction_reason": "",
+            "recording_seconds": "0",
+            "review_seconds": "0",
             "result": result,
-            "notes": "fixture",
+            "notes": "deterministic fixture; not real work data",
         })
 
-    fieldnames = list(rows[0])
+    fieldnames = [
+        "experiment_id", "trace_id", "occurred_at", "event_type", "work_description",
+        "observed_signals", "expected_work_item_id", "predicted_work_item_id", "confidence",
+        "assignment_status", "corrected", "correction_reason", "recording_seconds",
+        "review_seconds", "result", "notes",
+    ]
     with Path(output).open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
