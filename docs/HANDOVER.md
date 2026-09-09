@@ -35,7 +35,12 @@
 - 不明な関連付けを勝手に確定しない。
 
 ## Current first task
-最新CIではconnector APIの`pull` / `collect`不一致が残っている。まずこの契約を統一し、テストとCIで確認する。
+直近の実装コミットで、Connector Registryは`SourceConnector`契約の`collect`へ整合され、関連するCI失敗3件も修正済みと記録されている。次の作業では、最新main上で以下を再確認し、実装記録とCI実行結果の一致を確証化する。
+
+1. `pull` / `collect` の旧契約が残っていないことを検索で確認。
+2. 最新CIでcompile・tests・regression testsが実行されていることを確認。
+3. `docs/WORK_LOG.md` とREADMEの現在地を実装実態に合わせて更新。
+4. 実サービス認証、実仕事データ、UI実利用性はコード/CIとは別の外部実証境界として扱う。
 
 ## Security rules
 - 秘密情報、API token、個人情報をrepositoryへcommitしない。
