@@ -18,7 +18,7 @@ class PipelineResult:
 def ingest_event(event: SourceEvent, *, captured_at: datetime, work_item_ids: list[str], observed_signals: dict) -> PipelineResult:
     """Convert one observed event without ever auto-confirming assignment."""
     observed = to_evidence(event, captured_at=captured_at)
-    trace = evidence_to_trace(observed)
+    trace = evidence_to_trace(event, observed)
     result = associate(work_item_ids, observed_signals)
     trace.predicted_work_item_id = result.predicted_work_item_id
     trace.prediction_confidence = result.association_score
