@@ -1,8 +1,4 @@
-"""Rule-based Work Item candidate scoring.
-
-This deliberately does not call an LLM. The first implementation must make
-association behavior observable and testable before semantic AI is introduced.
-"""
+"""Conservative deterministic Work Item candidate scoring."""
 
 from dataclasses import dataclass
 
@@ -14,25 +10,20 @@ class Candidate:
     reasons: tuple[str, ...]
 
 
-def score_candidate(
-    *,
-    thread_match: bool = False,
-    document_match: bool = False,
-    participant_match: bool = False,
-    project_match: bool = False,
-    recent_active: bool = False,
-    keyword_match: bool = False,
-    time_proximity: bool = False,
-) -> float:
-    """Return a deterministic score from observable signals."""
-    score = 0.0
-    score += 0.40 if thread_match else 0.0
-    score += 0.20 if document_match else 0.0
-    score += 0.12 if participant_match else 0.0
-    score += 0.10 if project_match else 0.0
-    score += 0.08 if recent_active else 0.0
-    score += 0.06 if keyword_match else 0.0
-    score += 0.04 if time_proximity else 0.0
+WEIGHTS = {
+    "thread_match": 0.40,
+    "document_match": 0.20,
+    "participant_match": 0.12,
+    "project_match": 0.10,
+    "recent_active": 0.08,
+    "keyword_match": 0.06,
+    "time_proximity": 0.04,
+}
+
+
+def score_candidate(**signals: bool) -> float:
+    """Return a bounded deterministic score from observable boolean signals."""
+    score = sum(weight for name, weight in WEIGHTS.items() if bool(signals.get(name, False)))
     return round(min(score, 1.0), 10)
 
 
@@ -40,15 +31,23 @@ def choose_assignment(
     candidates: list[Candidate],
     *,
     minimum_confidence: float = 0.60,
+    minimum_margin: float = 0.05,
 ) -> Candidate | None:
-    """Choose a unique best candidate, or return None for the unclassified tray."""
+    """Choose a sufficiently strong and clearly separated candidate.
+
+    A close second candidate is treated as ambiguity, not as permission to guess.
+    """
+    if not 0.0 <= minimum_confidence <= 1.0:
+        raise ValueError("minimum_confidence must be between 0 and 1")
+    if minimum_margin < 0.0:
+        raise ValueError("minimum_margin must be non-negative")
     if not candidates:
         return None
 
-    ranked = sorted(candidates, key=lambda candidate: candidate.score, reverse=True)
+    ranked = sorted(candidates, key=lambda candidate: (-candidate.score, candidate.work_item_id))
     best = ranked[0]
     if best.score < minimum_confidence:
         return None
-    if len(ranked) > 1 and ranked[1].score == best.score:
+    if len(ranked) > 1 and best.score - ranked[1].score < minimum_margin:
         return None
     return best
