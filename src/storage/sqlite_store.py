@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from domain.models import WorkItem, WorkTrace
+from domain.models import AssignmentCorrection, WorkItem, WorkTrace
 
 
 def _dt(value: datetime | None) -> str | None:
@@ -22,47 +22,18 @@ class SQLiteStore:
         self.conn = self.connection
         self._init_schema()
 
-    def close(self) -> None:
-        self.connection.close()
-
+    def close(self) -> None: self.connection.close()
     def __enter__(self): return self
     def __exit__(self, exc_type, exc, tb): self.close()
 
     def _init_schema(self) -> None:
         self.connection.executescript("""
         PRAGMA foreign_keys = ON;
-        CREATE TABLE IF NOT EXISTS work_items (
-            work_item_id TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL,
-            started_at TEXT, completed_at TEXT, project_id TEXT, deadline TEXT,
-            confidentiality_level TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS evidence (
-            evidence_id TEXT PRIMARY KEY, source_type TEXT NOT NULL, source_id TEXT NOT NULL,
-            observed_at TEXT NOT NULL, captured_at TEXT NOT NULL, content_hash TEXT NOT NULL,
-            extractor_version TEXT NOT NULL, security_classification TEXT NOT NULL,
-            provenance TEXT NOT NULL, payload_digest TEXT NOT NULL, status TEXT NOT NULL,
-            expires_at TEXT, retention_policy TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS work_traces (
-            trace_id TEXT PRIMARY KEY, event_type TEXT NOT NULL, occurred_at TEXT NOT NULL,
-            work_item_id TEXT, predicted_work_item_id TEXT, prediction_confidence REAL,
-            assignment_status TEXT NOT NULL, started_at TEXT, ended_at TEXT,
-            duration_seconds INTEGER, source TEXT, content_reference TEXT,
-            security_classification TEXT NOT NULL, provenance TEXT, confidence REAL,
-            evidence_ids TEXT NOT NULL, extractor_version TEXT, metadata_json TEXT NOT NULL,
-            FOREIGN KEY(work_item_id) REFERENCES work_items(work_item_id)
-        );
-        CREATE TABLE IF NOT EXISTS assignment_corrections (
-            correction_id TEXT PRIMARY KEY, trace_id TEXT NOT NULL,
-            previous_work_item_id TEXT, corrected_work_item_id TEXT, corrected_at TEXT NOT NULL,
-            corrected_by TEXT NOT NULL, reason TEXT, evidence_ids TEXT NOT NULL,
-            client_version TEXT, FOREIGN KEY(trace_id) REFERENCES work_traces(trace_id)
-        );
-        CREATE TABLE IF NOT EXISTS audit_events (
-            audit_id INTEGER PRIMARY KEY AUTOINCREMENT, occurred_at TEXT NOT NULL,
-            actor TEXT NOT NULL, action TEXT NOT NULL, entity_type TEXT NOT NULL,
-            entity_id TEXT NOT NULL, details_json TEXT NOT NULL
-        );
+        CREATE TABLE IF NOT EXISTS work_items (work_item_id TEXT PRIMARY KEY, title TEXT NOT NULL, status TEXT NOT NULL, started_at TEXT, completed_at TEXT, project_id TEXT, deadline TEXT, confidentiality_level TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS evidence (evidence_id TEXT PRIMARY KEY, source_type TEXT NOT NULL, source_id TEXT NOT NULL, observed_at TEXT NOT NULL, captured_at TEXT NOT NULL, content_hash TEXT NOT NULL, extractor_version TEXT NOT NULL, security_classification TEXT NOT NULL, provenance TEXT NOT NULL, payload_digest TEXT NOT NULL, status TEXT NOT NULL, expires_at TEXT, retention_policy TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS work_traces (trace_id TEXT PRIMARY KEY, event_type TEXT NOT NULL, occurred_at TEXT NOT NULL, work_item_id TEXT, predicted_work_item_id TEXT, prediction_confidence REAL, assignment_status TEXT NOT NULL, started_at TEXT, ended_at TEXT, duration_seconds INTEGER, source TEXT, content_reference TEXT, security_classification TEXT NOT NULL, provenance TEXT, confidence REAL, evidence_ids TEXT NOT NULL, extractor_version TEXT, metadata_json TEXT NOT NULL, FOREIGN KEY(work_item_id) REFERENCES work_items(work_item_id));
+        CREATE TABLE IF NOT EXISTS assignment_corrections (correction_id TEXT PRIMARY KEY, trace_id TEXT NOT NULL, previous_work_item_id TEXT, corrected_work_item_id TEXT, corrected_at TEXT NOT NULL, corrected_by TEXT NOT NULL, reason TEXT, evidence_ids TEXT NOT NULL, client_version TEXT, FOREIGN KEY(trace_id) REFERENCES work_traces(trace_id));
+        CREATE TABLE IF NOT EXISTS audit_events (audit_id INTEGER PRIMARY KEY AUTOINCREMENT, occurred_at TEXT NOT NULL, actor TEXT NOT NULL, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, details_json TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS idx_evidence_source ON evidence(source_type, source_id);
         CREATE INDEX IF NOT EXISTS idx_trace_occurred ON work_traces(occurred_at);
         CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_events(entity_type, entity_id);
@@ -70,31 +41,26 @@ class SQLiteStore:
         self.connection.commit()
 
     def save_work_item(self, item: WorkItem) -> None:
-        self.connection.execute("INSERT OR REPLACE INTO work_items VALUES (?,?,?,?,?,?,?,?)", (
-            item.work_item_id, item.title, item.status, _dt(item.started_at), _dt(item.completed_at), item.project_id, _dt(item.deadline), item.confidentiality_level.value))
+        self.connection.execute("INSERT OR REPLACE INTO work_items VALUES (?,?,?,?,?,?,?,?)", (item.work_item_id, item.title, item.status, _dt(item.started_at), _dt(item.completed_at), item.project_id, _dt(item.deadline), item.confidentiality_level.value))
         self.connection.commit()
 
     def save_evidence(self, observed) -> None:
         e = observed.evidence
-        self.connection.execute("INSERT OR REPLACE INTO evidence VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-            e.evidence_id, e.source_type, e.source_id, _dt(e.observed_at), _dt(e.captured_at), e.content_hash,
-            e.extractor_version, e.security_classification.value, e.provenance.value, observed.payload_digest,
-            observed.status.value, _dt(observed.expires_at), observed.retention_policy))
+        self.connection.execute("INSERT OR REPLACE INTO evidence VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", (e.evidence_id, e.source_type, e.source_id, _dt(e.observed_at), _dt(e.captured_at), e.content_hash, e.extractor_version, e.security_classification.value, e.provenance.value, observed.payload_digest, observed.status.value, _dt(observed.expires_at), observed.retention_policy))
         self.connection.commit()
 
     def save_trace(self, trace: WorkTrace) -> None:
-        self.connection.execute("INSERT OR REPLACE INTO work_traces VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-            trace.trace_id, trace.event_type, _dt(trace.occurred_at), trace.work_item_id, trace.predicted_work_item_id,
-            trace.prediction_confidence, trace.assignment_status.value, _dt(trace.started_at), _dt(trace.ended_at),
-            trace.duration_seconds, trace.source, trace.content_reference, trace.security_classification.value,
-            trace.provenance.value if trace.provenance else None, trace.confidence, json.dumps(trace.evidence_ids),
-            trace.extractor_version, json.dumps(trace.metadata, sort_keys=True)))
+        self.connection.execute("INSERT OR REPLACE INTO work_traces VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (trace.trace_id, trace.event_type, _dt(trace.occurred_at), trace.work_item_id, trace.predicted_work_item_id, trace.prediction_confidence, trace.assignment_status.value, _dt(trace.started_at), _dt(trace.ended_at), trace.duration_seconds, trace.source, trace.content_reference, trace.security_classification.value, trace.provenance.value if trace.provenance else None, trace.confidence, json.dumps(trace.evidence_ids), trace.extractor_version, json.dumps(trace.metadata, sort_keys=True)))
         self.connection.commit()
+
+    def save_correction(self, correction: AssignmentCorrection) -> None:
+        if not correction.trace_id.strip() or not correction.corrected_by.strip(): raise ValueError("trace_id and corrected_by are required")
+        self.connection.execute("INSERT INTO assignment_corrections VALUES (?,?,?,?,?,?,?,?,?)", (correction.correction_id, correction.trace_id, correction.previous_work_item_id, correction.corrected_work_item_id, _dt(correction.corrected_at), correction.corrected_by, correction.reason, json.dumps(list(correction.evidence_ids)), correction.client_version))
+        self.audit(actor=correction.corrected_by, action="assignment_correction", entity_type="work_trace", entity_id=correction.trace_id, details={"correction_id": correction.correction_id, "previous": correction.previous_work_item_id, "corrected": correction.corrected_work_item_id, "reason": correction.reason}, at=correction.corrected_at)
 
     def audit(self, *, actor: str, action: str, entity_type: str, entity_id: str, details: dict | None = None, at: datetime | None = None) -> None:
         if not actor.strip(): raise ValueError("actor is required")
-        self.connection.execute("INSERT INTO audit_events(occurred_at,actor,action,entity_type,entity_id,details_json) VALUES (?,?,?,?,?,?)",
-                                (_dt(at or datetime.now().astimezone()), actor, action, entity_type, entity_id, json.dumps(details or {}, sort_keys=True)))
+        self.connection.execute("INSERT INTO audit_events(occurred_at,actor,action,entity_type,entity_id,details_json) VALUES (?,?,?,?,?,?)", (_dt(at or datetime.now().astimezone()), actor, action, entity_type, entity_id, json.dumps(details or {}, sort_keys=True)))
         self.connection.commit()
 
     def count(self, table: str) -> int:
@@ -103,5 +69,4 @@ class SQLiteStore:
         return int(self.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
 
 
-# Backward-compatible public name used by the original persistence tests.
 TraceStore = SQLiteStore
