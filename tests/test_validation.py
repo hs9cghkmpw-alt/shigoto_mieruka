@@ -11,9 +11,26 @@ def test_valid_work_item_has_no_errors():
 def test_invalid_work_item_is_rejected():
     now = datetime.now(timezone.utc)
     item = WorkItem("", "", started_at=now, completed_at=now - timedelta(seconds=1))
-    assert len(validate_work_item(item)) == 3
+    errors = validate_work_item(item)
+    assert "work_item_id is required" in errors
+    assert "title is required" in errors
+    assert "completed_at must not precede started_at" in errors
 
 
-def test_trace_confidence_must_be_bounded():
-    trace = WorkTrace("TRACE-1", "email", datetime.now(timezone.utc), confidence=1.1)
-    assert "confidence must be between 0 and 1" in validate_work_trace(trace)
+def test_invalid_trace_is_rejected():
+    now = datetime.now(timezone.utc)
+    trace = WorkTrace(
+        "",
+        "",
+        now,
+        started_at=now,
+        ended_at=now - timedelta(seconds=1),
+        prediction_confidence=1.2,
+        confidence=-0.1,
+    )
+    errors = validate_work_trace(trace)
+    assert "trace_id is required" in errors
+    assert "event_type is required" in errors
+    assert "ended_at must not precede started_at" in errors
+    assert "prediction_confidence must be between 0 and 1" in errors
+    assert "confidence must be between 0 and 1" in errors
