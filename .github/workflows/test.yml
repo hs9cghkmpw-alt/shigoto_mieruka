@@ -18,20 +18,3 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m pytest -q
-      - name: Run experiment
-        env:
-          PYTHONPATH: src
-        run: python -m experiment.run_experiment
-      - name: Aggregate experiment
-        env:
-          PYTHONPATH: src
-        run: |
-          python - <<'PY'
-          from experiment.aggregator import aggregate_csv
-          print(aggregate_csv('experiment_log.csv'))
-          PY
-      - name: Upload experiment log
-        uses: actions/upload-artifact@v4
-        with:
-          name: experiment-log
-          path: experiment_log.csv
