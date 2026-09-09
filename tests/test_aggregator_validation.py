@@ -5,22 +5,13 @@ from experiment.aggregator import aggregate_csv, validate_experiment_rows
 
 def valid_row(**overrides):
     row = {
-        "experiment_id": "EXP-001",
-        "trace_id": "TRACE-001",
-        "occurred_at": "2026-09-09T09:00:00+09:00",
-        "event_type": "work_started",
-        "work_description": "資料を確認した",
-        "observed_signals": "thread;document",
-        "expected_work_item_id": "WI-001",
-        "predicted_work_item_id": "WI-001",
-        "confidence": "0.80",
-        "assignment_status": "provisional",
-        "corrected": "false",
-        "correction_reason": "",
-        "recording_seconds": "12",
-        "review_seconds": "5",
-        "result": "GO",
-        "notes": "",
+        "experiment_id": "EXP-001", "trace_id": "TRACE-001",
+        "occurred_at": "2026-09-09T09:00:00+09:00", "event_type": "work_started",
+        "work_description": "資料を確認した", "observed_signals": "thread;document",
+        "expected_work_item_id": "WI-001", "predicted_work_item_id": "WI-001",
+        "confidence": "0.80", "assignment_status": "provisional", "corrected": "false",
+        "correction_reason": "", "recording_seconds": "12", "review_seconds": "5",
+        "result": "GO", "notes": "",
     }
     row.update(overrides)
     return row
@@ -31,17 +22,14 @@ def test_valid_experiment_row_has_no_schema_errors():
 
 
 def test_invalid_experiment_row_is_rejected():
-    errors = validate_experiment_rows([valid_row(
-        confidence="1.20", corrected="maybe", result="UNKNOWN"
-    )])
+    errors = validate_experiment_rows([valid_row(confidence="1.20", corrected="maybe", result="UNKNOWN")])
     assert "row 2: result must be GO, GRAY, or STOP" in errors
     assert "row 2: confidence must be between 0 and 1" in errors
     assert "row 2: corrected must be true or false" in errors
 
 
 def test_required_real_data_fields_are_enforced():
-    row = valid_row(work_description="", recording_seconds="-1", review_seconds="x")
-    errors = validate_experiment_rows([row])
+    errors = validate_experiment_rows([valid_row(work_description="", recording_seconds="-1", review_seconds="x")])
     assert "row 2: work_description is required" in errors
     assert "row 2: recording_seconds must be non-negative" in errors
     assert "row 2: review_seconds must be numeric" in errors
@@ -54,7 +42,17 @@ def test_correction_requires_reason():
 
 def test_stop_cannot_claim_matching_prediction():
     errors = validate_experiment_rows([valid_row(result="STOP")])
-    assert "row 2: STOP cannot have matching predicted and expected work item" in errors
+    assert "row 2: result does not match deterministic classification (GO)" in errors
+
+
+def test_result_is_not_trusted():
+    errors = validate_experiment_rows([valid_row(result="GRAY")])
+    assert "row 2: result does not match deterministic classification (GO)" in errors
+
+
+def test_assignment_status_must_match_prediction_state():
+    errors = validate_experiment_rows([valid_row(assignment_status="unassigned")])
+    assert "row 2: unassigned cannot contain predicted_work_item_id" in errors
 
 
 def test_duplicate_ids_are_rejected():
