@@ -18,3 +18,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m pytest -q
+      - name: Run experiment
+        env:
+          PYTHONPATH: src
+        run: python -m experiment.run_experiment
