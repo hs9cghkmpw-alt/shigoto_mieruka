@@ -1,4 +1,4 @@
-"""Run the minimal association experiment and emit experiment_log.csv."""
+"""Run deterministic association fixtures and emit an experiment log."""
 
 import csv
 from pathlib import Path
@@ -12,16 +12,18 @@ def run(output: str | Path = "experiment_log.csv") -> None:
     rows = []
     for fixture in FIXTURES:
         score = score_candidate(**fixture["signals"])
-        candidates = [
-            Candidate(fixture["expected_work_item_id"], score, tuple(fixture["signals"])),
-            Candidate("DISTRACTOR", 0.20, ("distractor",)),
-        ]
+        candidates = [Candidate(fixture["expected_work_item_id"], score, tuple(fixture["signals"]))]
+        candidates.extend(
+            Candidate(work_item_id, candidate_score, ("fixture_candidate",))
+            for work_item_id, candidate_score in fixture["candidates"]
+        )
         predicted = choose_assignment(candidates)
         predicted_id = predicted.work_item_id if predicted else ""
+        predicted_confidence = predicted.score if predicted else 0.0
         result = classify_result(
             predicted=predicted_id or None,
             expected=fixture["expected_work_item_id"],
-            confidence=score if predicted else 0.0,
+            confidence=predicted_confidence,
         )
         rows.append({
             "experiment_id": fixture["experiment_id"],
@@ -29,7 +31,7 @@ def run(output: str | Path = "experiment_log.csv") -> None:
             "trace_id": fixture["trace_id"],
             "expected_work_item_id": fixture["expected_work_item_id"],
             "predicted_work_item_id": predicted_id,
-            "confidence": f"{score:.2f}",
+            "confidence": f"{predicted_confidence:.2f}",
             "assignment_status": "provisional" if predicted_id else "unassigned",
             "corrected": "false",
             "result": result,
