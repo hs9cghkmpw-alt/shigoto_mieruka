@@ -2,59 +2,73 @@
 
 ## 目的
 
-実際の仕事で発生するWork Traceを記録・分析し、**本人がどのような仕事・環境・支援条件で能力を発揮できるかを実データから可視化する**ための基盤。
+実際の仕事で発生する証跡を安全にWorkTrace化し、仕事・環境・支援条件と結果を実データから振り返れる基盤を作る。
 
 単純な工数管理、常時監視、単一スコアによる人事評価を目的としない。
 
 ## 現在地
 
-**Phase 1: 実験可能な基盤 — 実装済み・CI検証済み**。
+**Phase 1: 実験基盤 — CI検証済み。**  
+**Phase 1.5: 証拠・永続化・ライフサイクル強化 — 実装中。**
 
-現在は、WorkTraceからWorkItemへの安全な暫定紐付けと、その実験結果を検証・集計するための基盤がある。実際の仕事データは捏造せず、実運用で取得したデータだけを実証に使用する。
+現在は以下まで実装している。
 
-### 実装済み
-
-- WorkItem / WorkTraceの最小ドメインモデル
+- WorkItem / WorkTrace / EvidenceRefのドメインモデル
 - OBSERVED / REPORTEDのprovenance分離
+- source ID・観測時刻・取得時刻・content hash・extractor versionによるEvidence lineage
 - PUBLIC / INTERNAL / CONFIDENTIAL / RESTRICTEDの機密区分
 - 派生データの機密区分継承
+- Evidence → WorkTraceの取り込み境界
 - 決定論的Association Engine
-- 信号からの候補生成・スコアリング
-- 一意の高信頼候補だけを暫定紐付け
-- 曖昧・低信頼ケースの未分類化
+- confidenceだけでなく候補間marginを使った曖昧性制御
+- 暫定紐付けと本人確認・訂正の分離
+- 訂正時に元のpredictionを破壊しない履歴保持
 - 実験CSVの厳格なスキーマ検証
 - GO / GRAY / STOPの証拠ベース再計算
-- 訂正理由・記録時間・確認時間の集計
-- 実データCSV検証CLI
+- 記録時間・確認時間・訂正率等の集計
+- ローカルSQLite永続化基盤
+- FACT → ANALYSIS → KNOWLEDGEのKnowledge昇格に人間承認ゲート
 - 決定論的fixtureによる回帰テスト
 - GitHub ActionsによるCI
 
-## 重要な設計原則
+## 現在のデータ経路
 
 ```text
-観測事実
+外部ソース
   ↓
-WorkTrace
+EvidenceRef
+  ↓
+WorkTrace（OBSERVED）
   ↓
 候補生成
   ↓
 決定論的推定
   ↓
-暫定紐付け
+暫定紐付け / UNASSIGNED
   ↓
 本人確認・訂正
   ↓
-分析
+Fact
+  ↓
+Analysis
+  ↓
+Knowledge（人間承認後のみvalidated）
 ```
+
+重要なのは、**推定を観測事実へ逆流させないこと**である。
+
+## 安全原則
 
 - FACT / ANALYSIS / KNOWLEDGEを混同しない
 - observed / reportedを上書き統合しない
 - AIの推測を観測事実として保存しない
 - 誤紐付けより未分類を優先する
+- confidenceが高くても候補間marginが小さければ未分類にする
 - 暫定紐付けを確定事実として扱わない
-- 実験結果のGO/GRAY/STOPを入力値として盲信しない
-- 訂正履歴を保持する
+- 訂正時に元のpredictionを消さない
+- Evidenceのsource identityとcontent hashを保持する
 - 派生データの機密区分を緩和しない
+- Knowledgeは人間承認なしにvalidatedへ昇格させない
 - 記録負担を秒単位で測定する
 - 外部AIはデフォルトOFF
 - 人事評価を単一スコアで自動決定しない
@@ -63,19 +77,20 @@ WorkTrace
 
 ## 実装上の境界
 
-現在のAssociation Engineは**観測済みシグナルから候補を生成して暫定紐付けする決定論的基盤**であり、メール・チャット・ファイル等からシグナル自体を取得するコネクタはまだ含まない。
+Association Engineは観測済みシグナルから候補を生成する。メール・チャット・ファイル等からシグナルを収集する具体的コネクタはまだ実装していない。
 
-また、FACT → ANALYSIS → KNOWLEDGE → Capability Profileの長期分析系は設計対象であり、Phase 1の実証対象ではない。
+Evidence → WorkTraceの共通取り込み境界とSQLite永続化は実装済みだが、特定サービスの自動収集は別フェーズとする。
+
+Capability Profileの統計モデル、実運用UI、実データによる有効性検証は未完了。ここを架空データで埋めない。
 
 ## 実証実験
 
-実際の仕事データを以下のCSVテンプレートへ記録し、検証CLIで集計する。
+実際の仕事データは `examples/real_data_experiment_template.csv` に記録し、`src/experiment/validate_real_data.py` で検証・集計する。
 
-- `examples/real_data_experiment_template.csv`
-- `src/experiment/validate_real_data.py`
-
-必要な実データが存在しない場合、システムは空のままにする。架空データで実証結果を作らない。
+決定論的fixtureは回帰テスト専用であり、実仕事の性能実証値として扱わない。
 
 ## 開発原則
 
-仕様より実証を優先する。ただし、安全性・provenance・再現性を壊す変更は採用しない。
+「作った」ではなく「証跡を再現でき、壊れた推定を検出でき、訂正可能である」ことを完成条件とする。
+
+安全性・provenance・再現性を壊す高速化は採用しない。
