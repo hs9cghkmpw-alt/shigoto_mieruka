@@ -22,6 +22,7 @@ def test_associate_returns_provisional_not_confirmed():
     assert result.predicted_work_item_id == "WI-1"
     assert result.status == "provisional"
     assert result.confidence == 0.60
+    assert result.margin == 0.60
 
 
 def test_associate_keeps_ambiguous_case_unclassified():
@@ -34,4 +35,17 @@ def test_associate_keeps_ambiguous_case_unclassified():
     )
     assert result.predicted_work_item_id is None
     assert result.status == "unassigned"
+    assert result.margin == 0.0
     assert len(result.candidates) == 2
+
+
+def test_associate_rejects_close_competition():
+    result = associate(
+        ["WI-1", "WI-2"],
+        {
+            "WI-1": {"thread_match": True, "document_match": True},
+            "WI-2": {"thread_match": True, "participant_match": True},
+        },
+    )
+    assert result.predicted_work_item_id is None
+    assert result.status == "unassigned"
