@@ -33,7 +33,7 @@ def score_candidate(
     score += 0.08 if recent_active else 0.0
     score += 0.06 if keyword_match else 0.0
     score += 0.04 if time_proximity else 0.0
-    return min(score, 1.0)
+    return round(min(score, 1.0), 10)
 
 
 def choose_assignment(
