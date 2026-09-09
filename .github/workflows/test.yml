@@ -25,10 +25,11 @@ jobs:
       - name: Aggregate experiment
         env:
           PYTHONPATH: src
-        run: python - <<'PY'
-from experiment.aggregator import aggregate_csv
-print(aggregate_csv('experiment_log.csv'))
-PY
+        run: |
+          python - <<'PY'
+          from experiment.aggregator import aggregate_csv
+          print(aggregate_csv('experiment_log.csv'))
+          PY
       - name: Upload experiment log
         uses: actions/upload-artifact@v4
         with:
