@@ -1,0 +1,1 @@
+experiment_id,trace_id,occurred_at,event_type,work_description,observed_signals,expected_work_item_id,predicted_work_item_id,confidence,assignment_status,corrected,correction_reason,recording_seconds,review_seconds,result,notes
