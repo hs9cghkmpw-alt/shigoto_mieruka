@@ -44,7 +44,7 @@ def test_associate_rejects_close_competition():
         ["WI-1", "WI-2"],
         {
             "WI-1": {"thread_match": True, "document_match": True},
-            "WI-2": {"thread_match": True, "participant_match": True},
+            "WI-2": {"thread_match": True, "participant_match": True, "time_proximity": True},
         },
     )
     assert result.predicted_work_item_id is None
