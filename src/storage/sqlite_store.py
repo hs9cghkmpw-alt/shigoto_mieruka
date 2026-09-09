@@ -53,7 +53,7 @@ class SQLiteStore:
             extractor_version TEXT NOT NULL, security_classification TEXT NOT NULL,
             provenance TEXT NOT NULL, payload_digest TEXT NOT NULL, status TEXT NOT NULL,
             expires_at TEXT, retention_policy TEXT NOT NULL,
-            UNIQUE(source_type, source_id, content_hash)
+            UNIQUE(source_type, source_id, content_hash), UNIQUE(content_hash)
         );
         CREATE TABLE IF NOT EXISTS work_traces (
             trace_id TEXT PRIMARY KEY, event_type TEXT NOT NULL, occurred_at TEXT NOT NULL,
@@ -98,11 +98,11 @@ class SQLiteStore:
             raise ValueError("duplicate evidence identity/content") from exc
 
     def save_trace(self, trace: WorkTrace) -> None:
-        errors = validate_work_trace(trace)
-        if errors: raise ValueError("invalid work trace: " + "; ".join(errors))
         if trace.work_item_id:
             row = self.connection.execute("SELECT confidentiality_level FROM work_items WHERE work_item_id=?", (trace.work_item_id,)).fetchone()
             if row is None: raise ValueError("work_item_id does not exist")
+        errors = validate_work_trace(trace)
+        if errors: raise ValueError("invalid work trace: " + "; ".join(errors))
         self.connection.execute("INSERT INTO work_traces VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(trace_id) DO UPDATE SET event_type=excluded.event_type,occurred_at=excluded.occurred_at,work_item_id=excluded.work_item_id,predicted_work_item_id=excluded.predicted_work_item_id,prediction_confidence=excluded.prediction_confidence,assignment_status=excluded.assignment_status,started_at=excluded.started_at,ended_at=excluded.ended_at,duration_seconds=excluded.duration_seconds,source=excluded.source,content_reference=excluded.content_reference,security_classification=excluded.security_classification,provenance=excluded.provenance,confidence=excluded.confidence,evidence_ids=excluded.evidence_ids,extractor_version=excluded.extractor_version,metadata_json=excluded.metadata_json", (trace.trace_id,trace.event_type,_dt(trace.occurred_at),trace.work_item_id,trace.predicted_work_item_id,trace.prediction_confidence,trace.assignment_status.value,_dt(trace.started_at),_dt(trace.ended_at),trace.duration_seconds,trace.source,trace.content_reference,trace.security_classification.value,trace.provenance.value if trace.provenance else None,trace.confidence,json.dumps(trace.evidence_ids),trace.extractor_version,json.dumps(trace.metadata,sort_keys=True)))
         self.connection.commit()
 
@@ -123,7 +123,7 @@ class SQLiteStore:
     def list_corrections(self, trace_id: str): return self.connection.execute("SELECT * FROM assignment_corrections WHERE trace_id=? ORDER BY corrected_at",(trace_id,)).fetchall()
     def list_audit(self, entity_type: str, entity_id: str): return self.connection.execute("SELECT * FROM audit_events WHERE entity_type=? AND entity_id=? ORDER BY audit_id",(entity_type,entity_id)).fetchall()
     def count(self, table: str) -> int:
-        allowed={"work_items","evidence","work_traces","assignment_corrections","audit_events"}
+        allowed={"work_items","evidence","work_traces","assignment_corrections","audit_events","facts","analyses","knowledge","capability_hypotheses","knowledge_status_history"}
         if table not in allowed: raise ValueError("invalid table")
         return int(self.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
 
