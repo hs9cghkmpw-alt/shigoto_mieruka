@@ -6,7 +6,6 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from domain.assignment import correct_assignment
 from domain.models import AssignmentCorrection, WorkItem, WorkTrace
 from domain.validation import validate_work_item, validate_work_trace
 
@@ -91,8 +90,12 @@ class SQLiteStore:
 
     def save_evidence(self, observed) -> None:
         e = observed.evidence
-        self.connection.execute("INSERT INTO evidence VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(evidence_id) DO UPDATE SET status=excluded.status,expires_at=excluded.expires_at,retention_policy=excluded.retention_policy", (e.evidence_id,e.source_type,e.source_id,_dt(e.observed_at),_dt(e.captured_at),e.content_hash,e.extractor_version,e.security_classification.value,e.provenance.value,observed.payload_digest,observed.status.value,_dt(observed.expires_at),observed.retention_policy))
-        self.connection.commit()
+        try:
+            self.connection.execute("INSERT INTO evidence VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", (e.evidence_id,e.source_type,e.source_id,_dt(e.observed_at),_dt(e.captured_at),e.content_hash,e.extractor_version,e.security_classification.value,e.provenance.value,observed.payload_digest,observed.status.value,_dt(observed.expires_at),observed.retention_policy))
+            self.connection.commit()
+        except sqlite3.IntegrityError as exc:
+            self.connection.rollback()
+            raise ValueError("duplicate evidence identity/content") from exc
 
     def save_trace(self, trace: WorkTrace) -> None:
         errors = validate_work_trace(trace)
