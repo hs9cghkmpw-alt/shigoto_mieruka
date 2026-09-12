@@ -35,7 +35,15 @@
 - 不明な関連付けを勝手に確定しない。
 
 ## Current first task
-最新CIではconnector APIの`pull` / `collect`不一致が残っている。まずこの契約を統一し、テストとCIで確認する。
+READMEと直近の実装履歴では、connector API不一致を含む初期レビュー指摘への修正commit群（`collect`契約整合、CI failure修正、Connector Registry回帰テスト等）が追加済みと記録されている。一方、`docs/WORK_LOG.md` の「現在地」と「次の修正」は古いスナップショットを含むため、作業再開時は次の順で再確認する。
+
+1. `git log -n 20 --oneline` で最新commitを確認。
+2. 最新CI runと失敗ジョブを確認。
+3. `tests/` と `.github/workflows/` を実行可能な状態で確認。
+4. `README.md`・`docs/WORK_LOG.md`・このHANDOVERの「現在地」が一致しているか確認。
+5. 不一致があれば、実装済み／CI検証済み／外部実証待ちを分離してから次作業を決める。
+
+現時点でコードから外部実証ができない境界は、実サービス認証済みconnector、実仕事データ評価、UI実利用性である。これらは「connector API不一致の修正済み」とは別ゲートとして扱う。
 
 ## Security rules
 - 秘密情報、API token、個人情報をrepositoryへcommitしない。
